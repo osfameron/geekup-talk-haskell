@@ -1,0 +1,12 @@
+We've been talking about doing a 'Functional Programming Night' at
+Liverpool Geekup, perhaps in May 2011.
+
+  http://groups.google.com/group/geekup/browse_thread/thread/f5b8ef58e6c6ca36
+
+I'm hoping to do a talk on Haskell, on a "real world" topic.  This code is a
+real use-case for one of the large subsystems of my company's product,
+http://www.attention-manager.com/ - the quiz engine.
+
+Though the application itself is written in Perl (and isn't likely to be ported
+anytime soon) this short example is enough to show some of Haskell's
+character, elegance, and applicability to a real-world problem.
