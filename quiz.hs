@@ -15,15 +15,12 @@ data Answer = MultiChoice  [BoolAnswer]
             | StringChoice [String]
     deriving Show
 
-data BoolAnswer = Y String
-                | N String
-    deriving Show
+data BoolAnswer = BoolAnswer { correct  :: Bool,
+                               boolText :: String
+                             } deriving Show
 
-correct (Y _) = True
-correct (N _) = False
-
-boolText (Y s) = s
-boolText (N s) = s
+y = BoolAnswer True
+n = BoolAnswer False
 
 -- *************
 -- MAIN function
@@ -43,19 +40,19 @@ quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
 pop = Section "Pop music" 60 [
     Question "Which of these are Beatles?" 5
         $ MultiChoice [
-            Y "John",
-            Y "Paul",
-            Y "George",
-            Y "Ringo",
-            N "Bob",
-            N "Jason" ],
+            y "John",
+            y "Paul",
+            y "George",
+            y "Ringo",
+            n "Bob",
+            n "Jason" ],
     Question "Which of these are Sugababes?" 5
         $ MultiChoice [
-            Y "Heidi",
-            Y "Amelle",
-            Y "Jade",
-            N "Tracy",
-            N "Shirley" ]
+            y "Heidi",
+            y "Amelle",
+            y "Jade",
+            n "Tracy",
+            n "Shirley" ]
         ]
 
 geo = RandomSection "Geography" 40 2 [
