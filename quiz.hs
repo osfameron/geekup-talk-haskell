@@ -154,6 +154,7 @@ getMultiChoices =
        filter (isDigit . head) .
        groupBy ((==) `on` isDigit)
 
+-- from http://greenokapi.net/blog/2007/09/06/more-random-fun/
 pickN :: Int -> [a] -> IO [a]
 pickN n xs = let len = length xs 
              in  pickN' n len xs
