@@ -1,0 +1,10 @@
+* Get the records from database/persistance layer
+
+* Make the quiz taking pluggable:
+    - e.g. might be console like now, or web, or GUI
+    - in case of Web, would be asynchronous, 
+    how do we manage partial trees?
+
+(ok, much of the TODO is about making it even MORE real-world...
+but hey, it's only a proof of concept for the talk slides, so far)
+
