@@ -19,8 +19,25 @@ data BoolAnswer = Y String
                 | N String
     deriving Show
 
+correct (Y _) = True
+correct (N _) = False
+
+boolText (Y s) = s
+boolText (N s) = s
+
+-- *************
+-- MAIN function
+--  prepare the version of the quiz that we'll take (by "stamping" it)
+--  then pass that to the takeQuiz routine
+--  this is all in the IO monad, as 
+-- a) stamp uses random numers, and b) takeQuiz has Input/Output
+--
+
 main = stamp quiz >>= takeQuiz
 
+-- *************
+-- define the quiz
+-- 
 quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
 
 pop = Section "Pop music" 60 [
@@ -49,51 +66,35 @@ geo = RandomSection "Geography" 40 2 [
     Question "What is the capital of Italy?"   2 $ StringChoice ["Rome", "Roma"]
     ]
 
-data CompletedNode = CompletedNode String (Int,Int) [CompletedNode] ModuleNode
-    deriving Show
+-- *************
+-- Functions to prepare and take the quiz
+-- 
 
-completeScore (CompletedNode _ i _ _) = i
+-- "stamps" a variant of the quiz, ready to be allocated to a quiz-taker.
+stamp :: ModuleNode -> IO ModuleNode
+stamp (Quiz s ns)              = Quiz    s   <$> mapM stamp ns
+stamp (Section s i ns)         = Section s i <$> mapM stamp ns
+stamp q@(Question _ _ _)       = return q
+stamp (RandomSection s i r ns) = do selected <- pickN r ns 
+                                    Section s i <$> mapM stamp selected
 
-correct (Y _) = True
-correct (N _) = False
+-- using record syntax, as we'll use completeScore accessor later!
+data CompletedNode =  
+    CompletedNode { completeDesc  :: String
+                  , completeScore :: (Int,Int)
+                  , completeNodes :: [CompletedNode] 
+                  , completeMNode :: ModuleNode 
+                  } deriving Show
 
-boolText (Y s) = s
-boolText (N s) = s
-
-numberMulti = zip [1..]
-
-getCorrect = map fst .
-             filter (correct . snd) .
-             numberMulti
-
-showBoolTextAnswers bs =
-    let ns  = numberMulti bs
-        ns' = map (\a -> intercalate ""
-                         ["\t", 
-                          show . fst $ a, 
-                          ". ", 
-                          boolText . snd $ a]
-                  ) ns
-    in unlines ns'
-
-printQuestion (Question s i (MultiChoice bs)) = do
-    putStrLn s
-    putStrLn $ showBoolTextAnswers bs
-    putStr "> "
-    return ()
-
-printQuestion (Question s _ _) = do
-    putStrLn s
-    putStr "> "
-    return ()
+-- takeQuiz runs the quiz taking, and shows a summary
+-- takeNode recurses down the quiz tree, prompting the user for Questions
 
 takeQuiz quiz@(Quiz s _)        = do
     result <- takeNode quiz
-    let (CompletedNode _ (i,_) _ _) = result
-    -- do something with result, if you want more detailed analysis
-
+    let (CompletedNode _ (i,_) _ _) = result -- could do more with this!
     putStrLn $ "In the quiz '" ++ s ++ "', you scored "
         ++ (show i) ++ "%"
+
 takeQuiz _ = error "takeQuiz expects a Quiz value"
 
 takeNode node@(Quiz    s ns)   = takeNode' node s 100 ns
@@ -114,6 +115,32 @@ takeNode' node s i ns = do
     let score' = (i * score) `div` total
     return $ CompletedNode s (score',i) cs node
 
+printQuestion (Question s i (MultiChoice bs)) = do
+    putStrLn s
+    putStrLn $ showBoolTextAnswers bs
+    putStr "> "
+    return ()
+printQuestion (Question s _ _) = do
+    putStrLn s
+    putStr "> "
+    return ()
+
+numberMulti = zip [1..]
+
+getCorrect = map fst .
+             filter (correct . snd) .
+             numberMulti
+
+showBoolTextAnswers bs =
+    let ns  = numberMulti bs
+        ns' = map (\a -> intercalate ""
+                         ["\t", 
+                          show . fst $ a, 
+                          ". ", 
+                          boolText . snd $ a]
+                  ) ns
+    in unlines ns'
+
 checkAnswer s (StringChoice ss) = any (==s) ss
 
 checkAnswer s (MultiChoice ss) = 
@@ -129,14 +156,6 @@ getMultiChoices =
        map read .
        filter (isDigit . head) .
        groupBy ((==) `on` isDigit)
-
--- "stamps" a variant of the quiz, ready to be allocated to a quiz-taker.
-stamp :: ModuleNode -> IO ModuleNode
-stamp (Quiz s ns)              = Quiz    s   <$> mapM stamp ns
-stamp (Section s i ns)         = Section s i <$> mapM stamp ns
-stamp q@(Question _ _ _)       = return q
-stamp (RandomSection s i r ns) = do selected <- pickN r ns 
-                                    Section s i <$> mapM stamp selected
 
 pickN :: Int -> [a] -> IO [a]
 pickN n xs = let len = length xs 
