@@ -1,6 +1,8 @@
 import System.Random
 import Control.Applicative
 import Control.Monad
+import Data.List (any)
+import Data.NumInstances -- to allow (1,1) + (2,2)
 
 data ModuleNode = Quiz String [ModuleNode]
                 | Section       String Int     [ModuleNode]
@@ -44,15 +46,39 @@ geo = RandomSection "Geography" 40 2 [
     Question "What is the capital of Italy?"   2 $ StringChoice ["Rome", "Roma"]
     ]
 
--- "flatten" isn't precisely what we're doing here, we're stamping a variant 
--- of the quiz, ready to be allocated to a quiz-taker.
+data CompletedNode = CompletedNode String (Int,Int) [CompletedNode] ModuleNode
+    deriving Show
 
-flatten :: ModuleNode -> IO ModuleNode
-flatten (Quiz s ns)              = Quiz    s   <$> mapM flatten ns
-flatten (Section s i ns)         = Section s i <$> mapM flatten ns
-flatten q@(Question _ _ _)       = return q
-flatten (RandomSection s i r ns) = do selected <- pickN r ns 
-                                      Section s r <$> mapM flatten selected
+completeScore (CompletedNode _ i _ _) = i
+
+takeQuiz node@(Question s i a) = do
+    putStr s
+    putStr " "
+    ans <- getLine
+    let score = if checkAnswer ans a then (i,i) else (0,i)
+    return $ CompletedNode ans score [] node
+
+takeQuiz node@(Section s i ns) = do
+    cs <- mapM takeQuiz ns
+    let (score, total) = sum $ map completeScore cs
+    let score' = (i * score) `div` total
+    return $ CompletedNode s (score',i) cs node
+
+checkAnswer s (StringChoice ss) = any (==s) ss
+
+checkAnswer s (MultiChoice ss) = True -- stub for now
+            
+
+RandomSection _ _ _ (q:_) = geo
+
+-- "stamps" a variant of the quiz, ready to be allocated to a quiz-taker.
+
+stamp :: ModuleNode -> IO ModuleNode
+stamp (Quiz s ns)              = Quiz    s   <$> mapM stamp ns
+stamp (Section s i ns)         = Section s i <$> mapM stamp ns
+stamp q@(Question _ _ _)       = return q
+stamp (RandomSection s i r ns) = do selected <- pickN r ns 
+                                    Section s i <$> mapM stamp selected
 
 pickN :: Int -> [a] -> IO [a]
 pickN n xs = let len = length xs 
