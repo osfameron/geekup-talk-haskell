@@ -130,10 +130,7 @@ getMultiChoices =
        filter (isDigit . head) .
        groupBy ((==) `on` isDigit)
 
-RandomSection _ _ _ (q:_) = geo
-
 -- "stamps" a variant of the quiz, ready to be allocated to a quiz-taker.
-
 stamp :: ModuleNode -> IO ModuleNode
 stamp (Quiz s ns)              = Quiz    s   <$> mapM stamp ns
 stamp (Section s i ns)         = Section s i <$> mapM stamp ns
@@ -154,38 +151,3 @@ pickN' n l (x:xs) = do b <- roll n l
 
 roll p q = do r <- getStdRandom (randomR (1,q)) 
               return $ r <= p
-
-{- Twey pasted
-    flatten (RandomSection s _ r ns) = do
-        rs <- pickN r ns
-        rs' <- sequence $ map flatten rs
-        return $ Section s r rs
-
-    -- Simplify sequence/map
-    flatten (RandomSection s _ r ns) = do
-        rs <- pickN r ns
-        rs' <- mapM flatten rs
-        return $ Section s r rs
-
-    -- Remove unnecessary variable by combining with <$>
-    flatten (RandomSection s _ r ns) = do
-        rs <- pickN r ns
-        Section s r <$> mapM flatten rs
-
-    -- Convert to ‘chain form’
-    flatten (RandomSection s _ r ns) = do
-        rs <- pickN r ns
-        (Section s r <$>) . mapM flatten $ rs
-
-    -- Remove do notation
-    flatten (RandomSection s _ r ns) =
-        pickN r ns >>= \ rs -> (Section s r <$>) . mapM flatten $ rs
-
-    -- Remove point
-    flatten (RandomSection s _ r ns) =
-        pickN r ns >>= (Section s r <$>) . mapM flatten
-
-    -- Convert to liftM to make the type look nicer
-    flatten (RandomSection s _ r ns) =
-        pickN r ns >>= liftM (Section s r) . mapM flatten
--}
