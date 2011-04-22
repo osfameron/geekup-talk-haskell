@@ -1,0 +1,38 @@
+Evolution of the 'stamp' function.
+
+After discussion with Twey in #haskell, he pasted the following
+suggestions for evolution.  The code in quiz.hs may not incorporate all
+of these refinements, for clarity etc.
+
+    stamp (RandomSection s _ r ns) = do
+        rs <- pickN r ns
+        rs' <- sequence $ map stamp rs
+        return $ Section s r rs
+
+    -- Simplify sequence/map
+    stamp (RandomSection s _ r ns) = do
+        rs <- pickN r ns
+        rs' <- mapM stamp rs
+        return $ Section s r rs
+
+    -- Remove unnecessary variable by combining with <$>
+    stamp (RandomSection s _ r ns) = do
+        rs <- pickN r ns
+        Section s r <$> mapM stamp rs
+
+    -- Convert to ‘chain form’
+    stamp (RandomSection s _ r ns) = do
+        rs <- pickN r ns
+        (Section s r <$>) . mapM stamp $ rs
+
+    -- Remove do notation
+    stamp (RandomSection s _ r ns) =
+        pickN r ns >>= \ rs -> (Section s r <$>) . mapM stamp $ rs
+
+    -- Remove point
+    stamp (RandomSection s _ r ns) =
+        pickN r ns >>= (Section s r <$>) . mapM stamp
+
+    -- Convert to liftM to make the type look nicer
+    stamp (RandomSection s _ r ns) =
+        pickN r ns >>= liftM (Section s r) . mapM stamp
