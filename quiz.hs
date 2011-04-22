@@ -1,8 +1,9 @@
 import System.Random
 import Control.Applicative
 import Control.Monad
-import Data.List (any)
+import Data.List
 import Data.NumInstances -- to allow (1,1) + (2,2)
+import Data.Char
 
 data ModuleNode = Quiz String [ModuleNode]
                 | Section       String Int     [ModuleNode]
@@ -17,6 +18,8 @@ data Answer = MultiChoice  [BoolAnswer]
 data BoolAnswer = Y String
                 | N String
     deriving Show
+
+main = stamp quiz >>= takeQuiz
 
 quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
 
@@ -51,23 +54,81 @@ data CompletedNode = CompletedNode String (Int,Int) [CompletedNode] ModuleNode
 
 completeScore (CompletedNode _ i _ _) = i
 
-takeQuiz node@(Question s i a) = do
-    putStr s
-    putStr " "
+correct (Y _) = True
+correct (N _) = False
+
+boolText (Y s) = s
+boolText (N s) = s
+
+numberMulti = zip [1..]
+
+getCorrect = map fst .
+             filter (correct . snd) .
+             numberMulti
+
+showBoolTextAnswers bs =
+    let ns  = numberMulti bs
+        ns' = map (\a -> intercalate ""
+                         ["\t", 
+                          show . fst $ a, 
+                          ". ", 
+                          boolText . snd $ a]
+                  ) ns
+    in unlines ns'
+
+printQuestion (Question s i (MultiChoice bs)) = do
+    putStrLn s
+    putStrLn $ showBoolTextAnswers bs
+    putStr "> "
+    return ()
+
+printQuestion (Question s _ _) = do
+    putStrLn s
+    putStr "> "
+    return ()
+
+takeQuiz quiz@(Quiz s _)        = do
+    result <- takeNode quiz
+    let (CompletedNode _ (i,_) _ _) = result
+    -- do something with result, if you want more detailed analysis
+
+    putStrLn $ "In the quiz '" ++ s ++ "', you scored "
+        ++ (show i) ++ "%"
+takeQuiz _ = error "takeQuiz expects a Quiz value"
+
+takeNode node@(Quiz    s ns)   = takeNode' node s 100 ns
+takeNode node@(Section s i ns) = takeNode' node s i   ns
+takeNode (RandomSection _ _ _ _) = 
+    error "Can't take a RandomSection, stamp the quiz first"
+takeNode node@(Question s i a) = do
+    printQuestion node
     ans <- getLine
-    let score = if checkAnswer ans a then (i,i) else (0,i)
+    let correct = checkAnswer ans a
+    let score = if correct then (i,i) else (0,i)
+    putStrLn $ if correct then "Correct!" else "Wrong!"
     return $ CompletedNode ans score [] node
 
-takeQuiz node@(Section s i ns) = do
-    cs <- mapM takeQuiz ns
+takeNode' node s i ns = do
+    cs <- mapM takeNode ns
     let (score, total) = sum $ map completeScore cs
     let score' = (i * score) `div` total
     return $ CompletedNode s (score',i) cs node
 
 checkAnswer s (StringChoice ss) = any (==s) ss
 
-checkAnswer s (MultiChoice ss) = True -- stub for now
-            
+checkAnswer s (MultiChoice ss) = 
+    let user    = getMultiChoices s
+        correct = getCorrect ss
+    in user == correct
+
+getMultiChoices :: String -> [Int]
+getMultiChoices = 
+    let op `on` p = (\a b -> p a `op` p b)
+    in sort .
+       nub  .
+       map read .
+       filter (isDigit . head) .
+       groupBy ((==) `on` isDigit)
 
 RandomSection _ _ _ (q:_) = geo
 
