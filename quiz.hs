@@ -15,8 +15,8 @@ data Answer = MultiChoice  [BoolAnswer]
             | StringChoice [String]
     deriving Show
 
-data BoolAnswer = BoolAnswer { correct  :: Bool,
-                               boolText :: String
+data BoolAnswer = BoolAnswer { boolAnswerCorrect  :: Bool,
+                               boolAnswerText :: String
                              } deriving Show
 
 -- *************
@@ -27,11 +27,13 @@ data BoolAnswer = BoolAnswer { correct  :: Bool,
 -- a) stamp uses random numers, and b) takeQuiz has Input/Output
 --
 
+main :: IO ()
 main = stamp quiz >>= takeQuiz
 
 -- *************
 -- define the quiz
 -- 
+quiz,geo,pop :: ModuleNode
 quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
 
 geo = RandomSection "Geography" 40 2 [
@@ -60,6 +62,7 @@ pop = Section "Pop music" 60 [
             n "Shirley" ]
         ]
 
+y,n :: String -> BoolAnswer
 y = BoolAnswer True
 n = BoolAnswer False
 
@@ -75,17 +78,18 @@ stamp q@(Question _ _ _)       = return q
 stamp (RandomSection s i r ns) = do selected <- pickN r ns 
                                     Section s i <$> mapM stamp selected
 
--- using record syntax, as we'll use completeScore accessor later!
+-- using record syntax, as we'll use completedNodeScore accessor later!
 data CompletedNode =  
-    CompletedNode { completeDesc  :: String
-                  , completeScore :: (Int,Int)
-                  , completeNodes :: [CompletedNode] 
-                  , completeMNode :: ModuleNode 
+    CompletedNode { completedNodeDesc       :: String
+                  , completedNodeScore      :: (Int,Int)
+                  , completedNodeChildren   :: [CompletedNode] 
+                  , completedNodeModuleNode :: ModuleNode 
                   } deriving Show
 
 -- takeQuiz runs the quiz taking, and shows a summary
 -- takeNode recurses down the quiz tree, prompting the user for Questions
 
+takeQuiz :: ModuleNode -> IO ()
 takeQuiz quiz@(Quiz s _)        = do
     result <- takeNode quiz
     let (CompletedNode _ score _ _) = result -- could do more with this!
@@ -93,9 +97,11 @@ takeQuiz quiz@(Quiz s _)        = do
         ++ (showPercent score)
 takeQuiz _ = error "takeQuiz expects a Quiz value"
 
+showPercent :: (Int, Int) -> [Char]
 showPercent (i, 100) = (show i) ++ "%"
 -- NB: not defined for fractions not over 100, we could convert those
 
+takeNode :: ModuleNode -> IO CompletedNode
 takeNode node@(Quiz    s ns)   = takeNode' node s 100 ns
 takeNode node@(Section s i ns) = takeNode' node s i   ns
 takeNode (RandomSection _ _ _ _) = 
@@ -108,12 +114,14 @@ takeNode node@(Question s i a) = do
     putStrLn $ if correct then "Correct!" else "Wrong!"
     return $ CompletedNode ans score [] node
 
+takeNode' :: ModuleNode -> String -> Int -> [ModuleNode] -> IO CompletedNode
 takeNode' node s i ns = do
     cs <- mapM takeNode ns
-    let (score, total) = sum $ map completeScore cs
+    let (score, total) = sum $ map completedNodeScore cs
     let score' = (i * score) `div` total
     return $ CompletedNode s (score',i) cs node
 
+printQuestion :: ModuleNode -> IO ()
 printQuestion (Question s i (MultiChoice bs)) = do
     putStrLn s
     putStrLn $ showBoolTextAnswers bs
@@ -124,27 +132,29 @@ printQuestion (Question s _ _) = do
     putStr "> "
     return ()
 
+numberMulti :: [b] -> [(Int, b)]
 numberMulti = zip [1..]
 
+showBoolTextAnswers :: [BoolAnswer] -> String
 showBoolTextAnswers bs =
     let ns  = numberMulti bs
         ns' = map (\a -> intercalate ""
                          ["\t", 
                           show . fst $ a, 
                           ". ", 
-                          boolText . snd $ a]
+                          boolAnswerText . snd $ a]
                   ) ns
     in unlines ns'
 
+checkAnswer :: String -> Answer -> Bool
 checkAnswer s (StringChoice ss) = any (==s) ss
-
 checkAnswer s (MultiChoice ss) = 
-    let user    = getMultiChoices s
-        correct = getCorrect ss
+    let user    = parseMultiChoices s
+        correct = getCorrectAnswers ss
     in user == correct
 
-getMultiChoices :: String -> [Int]
-getMultiChoices = 
+parseMultiChoices :: String -> [Int]
+parseMultiChoices = 
     let op `on` p = (\a b -> p a `op` p b)
     in sort .
        nub  .
@@ -152,8 +162,9 @@ getMultiChoices =
        filter (isDigit . head) .
        groupBy ((==) `on` isDigit)
 
-getCorrect = map fst .
-             filter (correct . snd) .
+getCorrectAnswers :: [BoolAnswer] -> [Int]
+getCorrectAnswers = map fst .
+             filter (boolAnswerCorrect . snd) .
              numberMulti
 
 -- from http://greenokapi.net/blog/2007/09/06/more-random-fun/
@@ -168,5 +179,6 @@ pickN' n l (x:xs) = do b <- roll n l
                                     return (x:xs)
                        else pickN' n (l-1) xs
 
+roll :: (Random a, Ord a, Num a) => a -> a -> IO Bool
 roll p q = do r <- getStdRandom (randomR (1,q)) 
               return $ r <= p

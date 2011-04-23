@@ -37,18 +37,18 @@ Typically, you could model these in an OO style, creating nearly a dozen
 classes and parent classes.  Defining the whole structure in a mere dozen lines
 is quite elegant.
 
-line 30: when we run the quiz, we will "stamp" it, and then take it.  Stamping
-involves choosing the right number of random questions for RandomSections.
-As we'll be using IO (user input, output to the terminal, and random numbers)
-we are "in the IO monad" hence we pass the stamp'd quiz to takeQuiz using the
-monadic bind operator (>>=)
+lines 30-31: when we run the quiz, we will "stamp" it, and then take it.
+Stamping involves choosing the right number of random questions for
+RandomSections.  As we'll be using IO (user input, output to the terminal, and
+random numbers) we are "in the IO monad" hence we pass the stamp'd quiz to
+takeQuiz using the monadic bind operator (>>=)
 
-lines 35-64: using the data structures we defined, we can create the Quiz in
+lines 36-67: using the data structures we defined, we can create the Quiz in
 a very expressive, rather readable way.  To make it even more pleasant, we've
 defined some helper functions, 'y' and 'n' which save us from having to repeat
 'BoolAnswer True "My answer"' everywhere.
 
-lines 71-76: this is the entirety of the 'stamp' function.  Stamping a Question
+lines 74-79: this is the entirety of the 'stamp' function.  Stamping a Question
 simply returns that same question.  Stamping a Section, or the Quiz itself
 just returns a copy of the Section/Quiz, but with all of its children stamped.
 So far, so trivial.  The important special case is that of RandomSections.
@@ -66,27 +66,27 @@ I ended up asking on the wonderful community resource, the #haskell IRC channel
 and got help from Twey and others who pointed me at the final syntax, using
 (<$>) instead of ($) and 'mapM' instead of 'map'.
 
-lines 89-115: define the principal quiz taking function.  This recurses through
+lines 92-122: define the principal quiz taking function.  This recurses through
 the question tree.  For questions, it will display the question, prompt for
 user input, then mark whether it was correct.  For sections, it stores the
 score (out of the maximum weight defined for the section, or 100% for the Quiz).
 
-lines 117-137: handle displaying the question.  There is some repetition here
+lines 124-147: handle displaying the question.  There is some repetition here
 which could be easily refactored -- the important thing to note here is how
 Haskell's pattern matching works on an arbitrarily deep level.  We're using
 this feature to additionally show the boolean answers in the MultiChoice case.
 
-lines 146-153: we do some simple parsing to turn the list of numbers that the
+lines 156-163: we do some simple parsing to turn the list of numbers that the
 user types in (for example "1,2,3") into a list of integers [1,2,3].  We chain
 together various functions to throw away all non-number groups, discard
 duplicates, and return the list ordered.
 
-lines 155-157: the getCorrect function, on the other hand, returns a list of
+lines 165-168: the getCorrect function, on the other hand, returns a list of
 integers for the actual correct answers.  This is in exactly the same format
-as the getMultiChoices function above, so line 144 in checkAnswer just has
+as the getMultiChoices function above, so line 154 in checkAnswer just has
 to compare the two values.
 
-finally, lines 160-172 declare the pickN function I've previously discussed in
+finally, lines 170-184 declare the pickN function I've previously discussed in
 http://greenokapi.net/blog/2007/09/06/more-random-fun/
 
 While I think this code is sufficient for the talk, and certainly adding more
