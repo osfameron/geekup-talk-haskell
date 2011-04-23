@@ -126,10 +126,6 @@ printQuestion (Question s _ _) = do
 
 numberMulti = zip [1..]
 
-getCorrect = map fst .
-             filter (correct . snd) .
-             numberMulti
-
 showBoolTextAnswers bs =
     let ns  = numberMulti bs
         ns' = map (\a -> intercalate ""
@@ -155,6 +151,10 @@ getMultiChoices =
        map read .
        filter (isDigit . head) .
        groupBy ((==) `on` isDigit)
+
+getCorrect = map fst .
+             filter (correct . snd) .
+             numberMulti
 
 -- from http://greenokapi.net/blog/2007/09/06/more-random-fun/
 pickN :: Int -> [a] -> IO [a]
