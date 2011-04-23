@@ -19,9 +19,6 @@ data BoolAnswer = BoolAnswer { correct  :: Bool,
                                boolText :: String
                              } deriving Show
 
-y = BoolAnswer True
-n = BoolAnswer False
-
 -- *************
 -- MAIN function
 --  prepare the version of the quiz that we'll take (by "stamping" it)
@@ -36,6 +33,14 @@ main = stamp quiz >>= takeQuiz
 -- define the quiz
 -- 
 quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
+
+geo = RandomSection "Geography" 40 2 [
+    Question "What is the capital of England?" 2 $ StringChoice ["London"],
+    Question "What is the capital of France?"  2 $ StringChoice ["Paris"],
+    Question "What is the capital of Finland?" 2 $ StringChoice ["Helsinki"],
+    Question "What is the capital of Germany?" 2 $ StringChoice ["Berlin"],
+    Question "What is the capital of Italy?"   2 $ StringChoice ["Rome", "Roma"]
+    ]
 
 pop = Section "Pop music" 60 [
     Question "Which of these are Beatles?" 5
@@ -55,13 +60,8 @@ pop = Section "Pop music" 60 [
             n "Shirley" ]
         ]
 
-geo = RandomSection "Geography" 40 2 [
-    Question "What is the capital of England?" 2 $ StringChoice ["London"],
-    Question "What is the capital of France?"  2 $ StringChoice ["Paris"],
-    Question "What is the capital of Finland?" 2 $ StringChoice ["Helsinki"],
-    Question "What is the capital of Germany?" 2 $ StringChoice ["Berlin"],
-    Question "What is the capital of Italy?"   2 $ StringChoice ["Rome", "Roma"]
-    ]
+y = BoolAnswer True
+n = BoolAnswer False
 
 -- *************
 -- Functions to prepare and take the quiz
@@ -88,11 +88,13 @@ data CompletedNode =
 
 takeQuiz quiz@(Quiz s _)        = do
     result <- takeNode quiz
-    let (CompletedNode _ (i,_) _ _) = result -- could do more with this!
+    let (CompletedNode _ score _ _) = result -- could do more with this!
     putStrLn $ "In the quiz '" ++ s ++ "', you scored "
-        ++ (show i) ++ "%"
-
+        ++ (showPercent score)
 takeQuiz _ = error "takeQuiz expects a Quiz value"
+
+showPercent (i, 100) = (show i) ++ "%"
+-- NB: not defined for fractions not over 100, we could convert those
 
 takeNode node@(Quiz    s ns)   = takeNode' node s 100 ns
 takeNode node@(Section s i ns) = takeNode' node s i   ns
