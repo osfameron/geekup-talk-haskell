@@ -92,7 +92,7 @@ data CompletedNode =
 takeQuiz :: ModuleNode -> IO ()
 takeQuiz quiz@(Quiz s _)        = do
     result <- takeNode quiz
-    let (CompletedNode _ score _ _) = result -- could do more with this!
+    let score = completedNodeScore result
     putStrLn $ "In the quiz '" ++ s ++ "', you scored "
         ++ (showPercent score)
 takeQuiz _ = error "takeQuiz expects a Quiz value"
