@@ -1,0 +1,106 @@
+Blog post draft:
+
+We've been talking about doing a 'Functional Programming Night' at
+Liverpool Geekup, perhaps in May 2011.
+
+  http://groups.google.com/group/geekup/browse_thread/thread/f5b8ef58e6c6ca36
+
+I'm hoping to do a talk on Haskell, on a "real world" topic.  This code is a
+real use-case for one of the large subsystems of my company's product,
+http://www.attention-manager.com/ - the quiz engine.
+
+Though the application itself is written in Perl (and isn't likely to be ported
+anytime soon) this short example is enough to show some of Haskell's
+character, elegance, and applicability to a real-world problem.
+
+As well as the talk slides, which I'll make available after the meeting, I
+wanted to briefly discuss the code.
+
+  https://github.com/osfameron/geekup-talk-haskell/blob/master/quiz.hs
+
+First of all, some background on a quiz: a quiz is made up of questions of
+different types, for example multiple choice, or free text questions.  While
+our old model for quizzes essentially consisted of a flat list of questions,
+customers are increasingly wanting flexibility, to organize them into sections,
+control the weighting of each section, and to present a random number of
+questions from each section.
+
+lines 1-6: import useful packages
+
+lines 8-20: the structure of the quizzes I discussed above can be modelled
+quite naturally in Haskell as a tree of Algebraic Data Types.  As we see here,
+a ModuleNode can either be the Quiz itself, a Section (possibly a RandomSection)
+or it can be a Question.  Similarly, we split Answers into Multi and String
+choice types.
+
+Typically, you could model these in an OO style, creating nearly a dozen
+classes and parent classes.  Defining the whole structure in a mere dozen lines
+is quite elegant.
+
+line 30: when we run the quiz, we will "stamp" it, and then take it.  Stamping
+involves choosing the right number of random questions for RandomSections.
+As we'll be using IO (user input, output to the terminal, and random numbers)
+we are "in the IO monad" hence we pass the stamp'd quiz to takeQuiz using the
+monadic bind operator (>>=)
+
+lines 35-64: using the data structures we defined, we can create the Quiz in
+a very expressive, rather readable way.  To make it even more pleasant, we've
+defined some helper functions, 'y' and 'n' which save us from having to repeat
+'BoolAnswer True "My answer"' everywhere.
+
+lines 71-76: this is the entirety of the 'stamp' function.  Stamping a Question
+simply returns that same question.  Stamping a Section, or the Quiz itself
+just returns a copy of the Section/Quiz, but with all of its children stamped.
+So far, so trivial.  The important special case is that of RandomSections.
+Here we randomly pick the appropriate number of questions, and then return
+a normal section of those.
+
+Though this code looks quite straight-forward, it has a few traps for the
+new programmer (me, in this case ;-) who's unused to writing IO in Haskell.  As
+we're using random numbers, our return value is 'IO ModuleNode', which means we
+can't simply write, for example:
+ 
+  stamp (Quiz s ns) = Quiz s $ map stamp ns
+
+I ended up asking on the wonderful community resource, the #haskell IRC channel
+and got help from Twey and others who pointed me at the final syntax, using
+(<$>) instead of ($) and 'mapM' instead of 'map'.
+
+lines 89-115: define the principal quiz taking function.  This recurses through
+the question tree.  For questions, it will display the question, prompt for
+user input, then mark whether it was correct.  For sections, it stores the
+score (out of the maximum weight defined for the section, or 100% for the Quiz).
+
+lines 117-137: handle displaying the question.  There is some repetition here
+which could be easily refactored -- the important thing to note here is how
+Haskell's pattern matching works on an arbitrarily deep level.  We're using
+this feature to additionally show the boolean answers in the MultiChoice case.
+
+lines 146-153: we do some simple parsing to turn the list of numbers that the
+user types in (for example "1,2,3") into a list of integers [1,2,3].  We chain
+together various functions to throw away all non-number groups, discard
+duplicates, and return the list ordered.
+
+lines 155-157: the getCorrect function, on the other hand, returns a list of
+integers for the actual correct answers.  This is in exactly the same format
+as the getMultiChoices function above, so line 144 in checkAnswer just has
+to compare the two values.
+
+finally, lines 160-172 declare the pickN function I've previously discussed in
+http://greenokapi.net/blog/2007/09/06/more-random-fun/
+
+While I think this code is sufficient for the talk, and certainly adding more
+features would make it too large to discuss in the time, there are a number of
+deficiencies that would be worth looking at:
+
+ * the quiz taking is strongly linked to console input.  This should be factored
+ out, so that the quiz can be taken using, for example, a GUI application, or
+ an API, or via the web.
+
+ * this suggests that the methodology used, which is very much synchronous, may
+ be insufficient.  If we're getting answers ad hoc, rather than in a single
+ session, then we may need to rework the data-structure to allow partially
+ taken quizzes, and store a pointer to the location of the next question.
+
+ * and if we're looking at storing the data, we'd want to think about how we
+ persist it - to an SQL database, for example?
