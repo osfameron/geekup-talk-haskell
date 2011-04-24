@@ -147,7 +147,8 @@ showBoolTextAnswers bs =
     in unlines ns'
 
 checkAnswer :: String -> Answer -> Bool
-checkAnswer s (StringChoice ss) = any (==s) ss
+checkAnswer s (StringChoice ss) = s `elem` ss
+-- checkAnswer s (StringChoice ss) = any ((=~) s) ss -- if ss contains regexps!
 checkAnswer s (MultiChoice ss) = 
     let user    = parseMultiChoices s
         correct = getCorrectAnswers ss
