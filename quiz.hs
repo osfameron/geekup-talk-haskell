@@ -126,11 +126,9 @@ printQuestion (Question s i (MultiChoice bs)) = do
     putStrLn s
     putStrLn $ showBoolTextAnswers bs
     putStr "> "
-    return ()
 printQuestion (Question s _ _) = do
     putStrLn s
     putStr "> "
-    return ()
 
 numberMulti :: [b] -> [(Int, b)]
 numberMulti = zip [1..]
