@@ -8,3 +8,7 @@
 (ok, much of the TODO is about making it even MORE real-world...
 but hey, it's only a proof of concept for the talk slides, so far)
 
+* restructure Quiz type as tree with simpler ADT (tree) and just the special
+behaviours as the node/leaves
+* e.g. instead of QuizNode being recursive
+

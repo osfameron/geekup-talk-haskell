@@ -5,19 +5,25 @@ import Data.List
 import Data.NumInstances -- to allow (1,1) + (2,2)
 import Data.Char
 
-data ModuleNode = Quiz String [ModuleNode]
-                | Section       String Int     [ModuleNode]
-                | RandomSection String Int Int [ModuleNode]
-                | Question      String Int      Answer
+type Name   = String
+type Score  = Int
+type Choose = Int
+
+data QuizNode = Quiz Name [QuizNode]
+                | Section       Name Score        [QuizNode]
+                | RandomSection Name Score Choose [QuizNode]
+                | Question      Name Score         Answer
     deriving Show
 
 data Answer = MultiChoice  [BoolAnswer]
             | StringChoice [String]
     deriving Show
 
-data BoolAnswer = BoolAnswer { boolAnswerCorrect  :: Bool,
-                               boolAnswerText :: String
-                             } deriving Show
+data BoolAnswer = BoolAnswer { 
+        boolAnswerCorrect  :: Bool,
+        boolAnswerText     :: String
+    } 
+    deriving Show
 
 -- *************
 -- MAIN function
@@ -33,7 +39,7 @@ main = stamp quiz >>= takeQuiz
 -- *************
 -- define the quiz
 -- 
-quiz,geo,pop :: ModuleNode
+quiz,geo,pop :: QuizNode
 quiz = Quiz "General Knowledge Quiz" [ pop, geo ]
 
 geo = RandomSection "Geography" 40 2 [
@@ -71,7 +77,7 @@ n = BoolAnswer False
 -- 
 
 -- "stamps" a variant of the quiz, ready to be allocated to a quiz-taker.
-stamp :: ModuleNode -> IO ModuleNode
+stamp :: QuizNode -> IO QuizNode
 stamp (Quiz s ns)              = Quiz    s   <$> mapM stamp ns
 stamp (Section s i ns)         = Section s i <$> mapM stamp ns
 stamp q@(Question _ _ _)       = return q
@@ -79,17 +85,18 @@ stamp (RandomSection s i r ns) = do selected <- pickN r ns
                                     Section s i <$> mapM stamp selected
 
 -- using record syntax, as we'll use completedNodeScore accessor later!
-data CompletedNode =  
-    CompletedNode { completedNodeDesc       :: String
-                  , completedNodeScore      :: (Int,Int)
-                  , completedNodeChildren   :: [CompletedNode] 
-                  , completedNodeModuleNode :: ModuleNode 
-                  } deriving Show
+data CompletedNode =  CompletedNode 
+    { 
+        completedNodeDesc       :: String,
+    completedNodeScore      :: (Int,Int),
+    completedNodeChildren   :: [CompletedNode],
+    completedNodeQuizNode :: QuizNode 
+} deriving Show
 
 -- takeQuiz runs the quiz taking, and shows a summary
 -- takeNode recurses down the quiz tree, prompting the user for Questions
 
-takeQuiz :: ModuleNode -> IO ()
+takeQuiz :: QuizNode -> IO ()
 takeQuiz quiz@(Quiz s _)        = do
     result <- takeNode quiz
     let score = completedNodeScore result
@@ -101,7 +108,7 @@ showPercent :: (Int, Int) -> [Char]
 showPercent (i, 100) = (show i) ++ "%"
 -- NB: not defined for fractions not over 100, we could convert those
 
-takeNode :: ModuleNode -> IO CompletedNode
+takeNode :: QuizNode -> IO CompletedNode
 takeNode node@(Quiz    s ns)   = takeNode' node s 100 ns
 takeNode node@(Section s i ns) = takeNode' node s i   ns
 takeNode (RandomSection _ _ _ _) = 
@@ -114,14 +121,14 @@ takeNode node@(Question s i a) = do
     putStrLn $ if correct then "Correct!" else "Wrong!"
     return $ CompletedNode ans score [] node
 
-takeNode' :: ModuleNode -> String -> Int -> [ModuleNode] -> IO CompletedNode
+takeNode' :: QuizNode -> Name -> Int -> [QuizNode] -> IO CompletedNode
 takeNode' node s i ns = do
     cs <- mapM takeNode ns
     let (score, total) = sum $ map completedNodeScore cs
     let score' = (i * score) `div` total
     return $ CompletedNode s (score',i) cs node
 
-printQuestion :: ModuleNode -> IO ()
+printQuestion :: QuizNode -> IO ()
 printQuestion (Question s i (MultiChoice bs)) = do
     putStrLn s
     putStrLn $ showBoolTextAnswers bs
